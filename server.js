@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 
 // 简易 .env 加载（无第三方依赖）：把同目录 .env 里的 KEY=VALUE 注入 process.env。
 function loadDotEnv() {
@@ -76,6 +77,139 @@ function readBody(req) {
     req.on("end", () => resolve(body));
     req.on("error", reject);
   });
+}
+
+function readBinaryBody(req, maxBytes = 50 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+
+    req.on("data", chunk => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        req.destroy();
+        reject(new Error("Request body is too large"));
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+function hasCredentialFields(data) {
+  if (!data || typeof data !== "object") return false;
+  const fields = ["access_token", "refresh_token", "id_token", "email", "client_id", "account_id", "password", "plan_type"];
+  return fields.some(field => Object.prototype.hasOwnProperty.call(data, field));
+}
+
+function normalizeCredentialAccounts(data, sourceFile) {
+  let accounts = [];
+
+  if (Array.isArray(data)) {
+    accounts = data;
+  } else if (data && Array.isArray(data.accounts)) {
+    accounts = data.accounts;
+  } else if (data && data.credentials) {
+    accounts = [data];
+  } else if (hasCredentialFields(data)) {
+    accounts = [{ name: data.email || "", platform: "", type: data.type || "", credentials: data }];
+  }
+
+  return accounts
+    .filter(account => account && typeof account === "object")
+    .map((account, index) => ({
+      index: index + 1,
+      name: account.name || account.email || (account.credentials && account.credentials.email) || "",
+      platform: account.platform || "",
+      type: account.type || "",
+      source_file: sourceFile || account.source_file || "",
+      credentials: account.credentials && typeof account.credentials === "object" ? account.credentials : {}
+    }))
+    .filter(account => Object.keys(account.credentials).length > 0);
+}
+
+function findEndOfCentralDirectory(buffer) {
+  const minOffset = Math.max(0, buffer.length - 22 - 65535);
+  for (let offset = buffer.length - 22; offset >= minOffset; offset -= 1) {
+    if (buffer.readUInt32LE(offset) === 0x06054b50) return offset;
+  }
+  throw new Error("Invalid ZIP file");
+}
+
+function readZipEntries(buffer) {
+  const eocdOffset = findEndOfCentralDirectory(buffer);
+  const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+  let offset = buffer.readUInt32LE(eocdOffset + 16);
+  const entries = [];
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) {
+      throw new Error("Invalid ZIP central directory");
+    }
+
+    const compressionMethod = buffer.readUInt16LE(offset + 10);
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const fileNameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
+    const name = buffer.subarray(offset + 46, offset + 46 + fileNameLength).toString("utf8");
+
+    if (!name.endsWith("/")) {
+      entries.push({ name, compressionMethod, compressedSize, localHeaderOffset });
+    }
+
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
+function readZipEntry(buffer, entry) {
+  const offset = entry.localHeaderOffset;
+  if (buffer.readUInt32LE(offset) !== 0x04034b50) {
+    throw new Error(`Invalid ZIP local header: ${entry.name}`);
+  }
+
+  const fileNameLength = buffer.readUInt16LE(offset + 26);
+  const extraLength = buffer.readUInt16LE(offset + 28);
+  const dataStart = offset + 30 + fileNameLength + extraLength;
+  const compressed = buffer.subarray(dataStart, dataStart + entry.compressedSize);
+
+  if (entry.compressionMethod === 0) return compressed;
+  if (entry.compressionMethod === 8) return zlib.inflateRawSync(compressed);
+  throw new Error(`Unsupported ZIP compression method: ${entry.compressionMethod}`);
+}
+
+async function parseCredentialsZip(req, res) {
+  try {
+    const buffer = await readBinaryBody(req);
+    const entries = readZipEntries(buffer).filter(entry => /\.json$/i.test(entry.name));
+    const accounts = [];
+    const skipped = [];
+
+    for (const entry of entries) {
+      try {
+        const text = readZipEntry(buffer, entry).toString("utf8");
+        const data = JSON.parse(text);
+        accounts.push(...normalizeCredentialAccounts(data, entry.name));
+      } catch (error) {
+        skipped.push({ file: entry.name, error: error.message });
+      }
+    }
+
+    sendJson(res, 200, {
+      accounts,
+      total_json_files: entries.length,
+      parsed_accounts: accounts.length,
+      skipped
+    });
+  } catch (error) {
+    sendJson(res, 400, { error: error.message || "ZIP parse failed" });
+  }
 }
 
 async function proxyChangePassword(req, res) {
@@ -285,6 +419,11 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "POST" && req.url === "/api/messages") {
     proxyMessages(req, res);
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/api/credentials/zip") {
+    parseCredentialsZip(req, res);
     return;
   }
 
