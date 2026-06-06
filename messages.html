@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FirstMail 邮件查看器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6fa;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #d9e0ea;
+      --accent: #246bfe;
+      --accent-strong: #174bc1;
+      --danger: #c13434;
+      --ok: #168a53;
+      --shadow: 0 14px 40px rgba(23, 32, 51, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+    }
+
+    .shell {
+      width: min(2200px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 24px 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 340px minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 52px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcff;
+      flex: 0 0 auto;
+    }
+
+    .panel-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .panel-body {
+      padding: 14px;
+      flex: 0 0 auto;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(36, 107, 254, 0.14);
+    }
+
+    textarea {
+      min-height: 150px;
+      padding: 12px;
+      resize: vertical;
+      line-height: 1.5;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+    }
+
+    input,
+    select {
+      height: 40px;
+      padding: 0 11px;
+    }
+
+    button {
+      min-height: 40px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0 13px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+      transform: none;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .primary:hover:not(:disabled) {
+      background: var(--accent-strong);
+    }
+
+    .secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .secondary:hover:not(:disabled) {
+      border-color: #9aa8bc;
+    }
+
+    .field {
+      margin-bottom: 13px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .hint,
+    .status {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .status.error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .status.ok {
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .account-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .message-list {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .account-item,
+    .message-item {
+      display: block;
+      width: 100%;
+      min-height: auto;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background: #fff;
+      color: var(--text);
+      text-align: left;
+      padding: 12px 14px;
+      font-weight: 400;
+    }
+
+    .account-item:hover,
+    .message-item:hover {
+      background: #f6f8fc;
+    }
+
+    .account-item.active,
+    .message-item.active {
+      background: #edf4ff;
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    .account-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .account-main {
+      flex: 1 1 auto;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .copy-email {
+      flex: 0 0 auto;
+      min-height: 28px;
+      height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .copy-email:hover {
+      border-color: var(--accent);
+    }
+
+    .copy-email.copied {
+      color: var(--ok);
+      border-color: var(--ok);
+    }
+
+    .copy-email.copy-failed {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .email {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .meta {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .subject {
+      font-weight: 700;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .snippet {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .detail-body {
+      padding: 0;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 18px 14px;
+      line-height: 1.6;
+    }
+
+    .mail-title {
+      margin: 0 0 10px;
+      font-size: 22px;
+      line-height: 1.25;
+      letter-spacing: 0;
+      word-break: break-word;
+    }
+
+    .mail-meta {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mail-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      flex: 0 0 auto;
+    }
+
+    .mail-content {
+      padding: 0;
+      line-height: 1.65;
+      word-break: break-word;
+      background: #fff;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: auto;
+    }
+
+    .mail-content pre {
+      padding: 18px 20px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .mail-frame {
+      display: block;
+      width: 100%;
+      flex: 1 1 auto;
+      min-height: 0;
+      border: 0;
+      background: #fff;
+    }
+
+    .raw-json {
+      display: none;
+      flex: 0 0 auto;
+      max-height: 45%;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+      padding: 14px 20px 18px;
+      background: #fbfcff;
+    }
+
+    .raw-json.visible {
+      display: block;
+    }
+
+    @media (max-width: 1120px) {
+      .shell {
+        height: auto;
+        display: block;
+      }
+
+      .layout {
+        grid-template-columns: 320px 1fr;
+        height: auto;
+        min-height: 0;
+      }
+
+      .account-scroll {
+        max-height: none;
+        overflow: visible;
+      }
+
+      .account-list {
+        max-height: 55vh;
+        overflow: auto;
+      }
+
+      .message-list {
+        max-height: 55vh;
+      }
+
+      .detail {
+        grid-column: 1 / -1;
+      }
+
+      .detail-body,
+      .mail-content {
+        overflow: visible;
+      }
+
+      .mail-frame {
+        flex: none;
+        min-height: 55vh;
+        height: 55vh;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        width: min(100% - 20px, 1760px);
+        padding-top: 16px;
+      }
+
+      header,
+      .layout {
+        display: block;
+      }
+
+      .panel {
+        margin-bottom: 12px;
+      }
+
+      .account-list {
+        max-height: 50vh;
+      }
+
+      .message-list {
+        max-height: 50vh;
+      }
+
+      .mail-frame {
+        min-height: 60vh;
+        height: 60vh;
+      }
+
+      .row,
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>FirstMail 邮件查看器</h1>
+        <p class="subtitle">粘贴或使用默认账号数据，选择账号后拉取邮件列表，再查看邮件具体内容。</p>
+      </div>
+      <a class="status" href="/" title="返回密码修改页面">密码修改页</a>
+    </header>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <div class="panel-title">账号</div>
+          <span class="status" id="accountCount">0 个</span>
+        </div>
+        <div class="account-scroll">
+          <div class="panel-body">
+            <div class="field">
+              <label for="accountInput">原始数据</label>
+              <textarea id="accountInput" spellcheck="false"></textarea>
+              <p class="hint">格式为 <span class="email">email:password</span>，支持多行。</p>
+            </div>
+            <div class="field">
+              <label for="limitInput">拉取邮件数量</label>
+              <input id="limitInput" type="number" min="1" max="100" value="10">
+              <p class="hint">每个账号最多拉取多少封邮件（1-100）。</p>
+            </div>
+            <div class="actions">
+              <button class="primary" id="parseButton" type="button">载入账号</button>
+              <button class="secondary" id="loadAllButton" type="button" disabled>拉取全部</button>
+            </div>
+            <p class="status" id="statusText">待载入账号</p>
+          </div>
+          <div class="account-list" id="accountList">
+            <div class="empty">暂无账号</div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">邮件列表</div>
+          <button class="primary" id="refreshButton" type="button" disabled>拉取邮件</button>
+        </div>
+        <div class="message-list" id="messageList">
+          <div class="empty">请选择账号后拉取邮件。</div>
+        </div>
+      </section>
+
+      <section class="panel detail">
+        <div class="panel-head">
+          <div class="panel-title">邮件内容</div>
+          <button class="secondary" id="rawButton" type="button" disabled>原始 JSON</button>
+        </div>
+        <div class="detail-body" id="detailBody">
+          <div class="empty">选择一封邮件后，这里会显示正文。</div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const DEFAULT_ACCOUNTS = `example1@example.com:password1
+example2@example.com:password2`;
+
+    const accountInput = document.getElementById("accountInput");
+    const limitInput = document.getElementById("limitInput");
+    const parseButton = document.getElementById("parseButton");
+    const loadAllButton = document.getElementById("loadAllButton");
+    const refreshButton = document.getElementById("refreshButton");
+    const rawButton = document.getElementById("rawButton");
+    const accountList = document.getElementById("accountList");
+    const messageList = document.getElementById("messageList");
+    const detailBody = document.getElementById("detailBody");
+    const statusText = document.getElementById("statusText");
+    const accountCount = document.getElementById("accountCount");
+
+    let accounts = [];
+    let selectedAccountIndex = -1;
+    let selectedMessageIndex = -1;
+    let currentMessages = [];
+    let rawVisible = false;
+
+    const VIEWER_STORAGE_KEY = "firstmail_viewer_accounts";
+    // 优先使用从"批量修改密码"页同步过来的账号数据，没有时才用内置示例。
+    const syncedAccounts = localStorage.getItem(VIEWER_STORAGE_KEY);
+    const loadedFromSync = !!(syncedAccounts && syncedAccounts.trim());
+    accountInput.value = loadedFromSync ? syncedAccounts : DEFAULT_ACCOUNTS;
+
+    function parseAccounts(rawText) {
+      const byEmail = new Map();
+      const errors = [];
+
+      rawText.split(/\r?\n/).forEach((line, index) => {
+        const value = line.trim();
+        if (!value) return;
+
+        const separator = value.indexOf(":");
+        if (separator <= 0 || separator === value.length - 1) {
+          errors.push(`第 ${index + 1} 行格式错误`);
+          return;
+        }
+
+        const email = value.slice(0, separator).trim();
+        const password = value.slice(separator + 1);
+
+        if (!email.includes("@")) {
+          errors.push(`第 ${index + 1} 行邮箱格式可能不正确`);
+          return;
+        }
+
+        byEmail.set(email, {
+          email,
+          password,
+          status: "待拉取",
+          count: null,
+          messages: [],
+          error: ""
+        });
+      });
+
+      return { accounts: Array.from(byEmail.values()), errors };
+    }
+
+    function setStatus(message, type = "") {
+      statusText.textContent = message;
+      statusText.className = `status ${type}`.trim();
+    }
+
+    function renderAccounts() {
+      accountCount.textContent = `${accounts.length} 个`;
+      loadAllButton.disabled = accounts.length === 0;
+      refreshButton.disabled = selectedAccountIndex < 0;
+
+      if (accounts.length === 0) {
+        accountList.innerHTML = '<div class="empty">暂无账号</div>';
+        return;
+      }
+
+      accountList.innerHTML = accounts.map((account, index) => `
+        <div class="account-item ${index === selectedAccountIndex ? "active" : ""}" data-index="${index}">
+          <div class="account-main">
+            <div class="email">${escapeHtml(account.email)}</div>
+            <div class="meta">${escapeHtml(account.status)}${account.count === null ? "" : ` · ${account.count} 封`}</div>
+            ${account.error ? `<div class="meta status error">${escapeHtml(account.error)}</div>` : ""}
+          </div>
+          <button class="copy-email" type="button" data-copy="${escapeHtml(account.email)}" title="复制邮箱">复制</button>
+        </div>
+      `).join("");
+    }
+
+    function renderMessages() {
+      rawButton.disabled = selectedMessageIndex < 0;
+
+      if (selectedAccountIndex < 0) {
+        messageList.innerHTML = '<div class="empty">请选择账号后拉取邮件。</div>';
+        return;
+      }
+
+      if (currentMessages.length === 0) {
+        messageList.innerHTML = '<div class="empty">当前账号暂无邮件，或尚未拉取成功。</div>';
+        return;
+      }
+
+      messageList.innerHTML = currentMessages.map((message, index) => `
+        <button class="message-item ${index === selectedMessageIndex ? "active" : ""}" type="button" data-index="${index}">
+          <div class="subject">${escapeHtml(getField(message, ["subject", "title"]) || "(无主题)")}</div>
+          <div class="meta">${escapeHtml(getSender(message))} · ${escapeHtml(getDate(message))}</div>
+          <div class="snippet">${escapeHtml(getSnippet(message))}</div>
+        </button>
+      `).join("");
+    }
+
+    function renderDetail() {
+      if (selectedMessageIndex < 0 || !currentMessages[selectedMessageIndex]) {
+        detailBody.innerHTML = '<div class="empty">选择一封邮件后，这里会显示正文。</div>';
+        rawButton.disabled = true;
+        return;
+      }
+
+      const message = currentMessages[selectedMessageIndex];
+      // 拉取的是当前账号的收件箱，接口通常不返回收件人字段，用账号邮箱兜底。
+      const accountEmail = selectedAccountIndex >= 0 && accounts[selectedAccountIndex]
+        ? accounts[selectedAccountIndex].email
+        : "";
+      const recipient = getRecipients(message) || accountEmail || "未知";
+      const subject = getField(message, ["subject", "title"]) || "(无主题)";
+      const htmlBody = getField(message, ["html", "body_html", "html_body"]);
+      const textBody = getField(message, ["text", "body", "content", "plain", "plain_text", "body_text"]) || getSnippet(message) || "";
+      const rawJson = JSON.stringify(message, null, 2);
+
+      detailBody.innerHTML = `
+        <div class="mail-header">
+          <h2 class="mail-title">${escapeHtml(subject)}</h2>
+          <div class="mail-meta">
+            <div>发件人：${escapeHtml(getSender(message))}</div>
+            <div>收件人：${escapeHtml(recipient)}</div>
+            <div>时间：${escapeHtml(getDate(message))}</div>
+          </div>
+        </div>
+        <div class="mail-content">
+          ${htmlBody ? `<iframe class="mail-frame" title="邮件 HTML 内容" sandbox="allow-popups allow-popups-to-escape-sandbox" srcdoc="${escapeAttribute(buildFrameDocument(htmlBody))}"></iframe>` : `<pre>${escapeHtml(textBody)}</pre>`}
+        </div>
+        <div class="raw-json ${rawVisible ? "visible" : ""}" id="rawJson">
+          <pre>${escapeHtml(rawJson)}</pre>
+        </div>
+      `;
+      rawButton.disabled = false;
+    }
+
+    async function loadMessagesForAccount(index) {
+      const account = accounts[index];
+      account.status = "拉取中";
+      account.error = "";
+      renderAccounts();
+
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: account.email,
+          password: account.password,
+          limit: Number(limitInput.value) || 10,
+          folder: "INBOX"
+        })
+      });
+
+      const text = await response.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (error) {
+        data = { error: text || `HTTP ${response.status}` };
+      }
+
+      if (!response.ok) {
+        throw new Error(getResponseMessage(data, text) || `HTTP ${response.status}`);
+      }
+
+      const messages = sortByDateDesc(normalizeMessages(data));
+      account.messages = messages;
+      account.count = messages.length;
+      account.status = "已拉取";
+      account.error = "";
+      // 拉取成功后同步刷新左侧账号列表，更新状态与数量。
+      renderAccounts();
+
+      if (index === selectedAccountIndex) {
+        currentMessages = messages;
+        selectedMessageIndex = messages.length ? 0 : -1;
+        rawVisible = false;
+        renderMessages();
+        renderDetail();
+      }
+    }
+
+    function normalizeMessages(data) {
+      if (Array.isArray(data)) return data;
+      if (!data || typeof data !== "object") return [];
+
+      for (const key of ["messages", "data", "results", "emails", "items"]) {
+        if (Array.isArray(data[key])) return data[key];
+      }
+
+      if (data.data && typeof data.data === "object") {
+        for (const key of ["messages", "results", "emails", "items"]) {
+          if (Array.isArray(data.data[key])) return data.data[key];
+        }
+      }
+
+      return [];
+    }
+
+    function getResponseMessage(body, fallbackText) {
+      if (!body) return fallbackText || "";
+      if (typeof body === "string") return body;
+      if (body.message) return body.message;
+      if (body.detail) return body.detail;
+      if (body.error) return body.error;
+      return JSON.stringify(body);
+    }
+
+    function getField(source, keys) {
+      for (const key of keys) {
+        if (source && source[key] !== undefined && source[key] !== null && source[key] !== "") {
+          return source[key];
+        }
+      }
+      return "";
+    }
+
+    function getSender(message) {
+      const value = getField(message, ["from", "sender", "from_email"]);
+      if (typeof value === "object") return value.email || value.name || JSON.stringify(value);
+      return value || "未知发件人";
+    }
+
+    function getRecipients(message) {
+      const value = getField(message, ["to", "recipients", "recipient"]);
+      if (Array.isArray(value)) {
+        return value.map(item => typeof item === "object" ? item.email || item.name || JSON.stringify(item) : item).join(", ");
+      }
+      if (typeof value === "object") return value.email || value.name || JSON.stringify(value);
+      return value || "";
+    }
+
+    function getDate(message) {
+      return getField(message, ["date", "created_at", "received_at", "timestamp"]) || "未知时间";
+    }
+
+    function getTimestamp(message) {
+      // 去掉结尾的 "(UTC)" 之类括号注释再解析，兼容 "Sat, 06 Jun 2026 07:12:20 +0000 (UTC)" 这种格式。
+      const raw = String(getField(message, ["date", "created_at", "received_at", "timestamp"]) || "")
+        .replace(/\s*\([^)]*\)\s*$/, "")
+        .trim();
+      const ms = Date.parse(raw);
+      return Number.isNaN(ms) ? 0 : ms;
+    }
+
+    function sortByDateDesc(messages) {
+      // 按时间从近到远排序；无法解析时间的排到最后。
+      return messages.slice().sort((a, b) => getTimestamp(b) - getTimestamp(a));
+    }
+
+    function getSnippet(message) {
+      const value = getField(message, ["snippet", "preview", "text", "body", "content", "plain_text"]);
+      return stripHtml(String(value || "")).slice(0, 220);
+    }
+
+    function stripHtml(value) {
+      return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function sanitizeHtml(html) {
+      const template = document.createElement("template");
+      template.innerHTML = html;
+
+      template.content.querySelectorAll("script, iframe, object, embed, link, meta").forEach(node => node.remove());
+      template.content.querySelectorAll("*").forEach(node => {
+        [...node.attributes].forEach(attr => {
+          const name = attr.name.toLowerCase();
+          const value = attr.value.trim().toLowerCase();
+          if (name.startsWith("on") || value.startsWith("javascript:")) {
+            node.removeAttribute(attr.name);
+          }
+        });
+      });
+
+      return template.innerHTML;
+    }
+
+    function buildFrameDocument(html) {
+      return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base target="_blank">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #172033;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      padding: 18px 20px 28px;
+      overflow-wrap: anywhere;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    table {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>${sanitizeHtml(html)}</body>
+</html>`;
+    }
+
+    async function copyEmail(button) {
+      const email = button.dataset.copy || "";
+      if (!email) return;
+
+      let ok = false;
+      try {
+        await navigator.clipboard.writeText(email);
+        ok = true;
+      } catch (error) {
+        // 非 HTTPS / 旧浏览器下退回到传统复制方式。
+        const helper = document.createElement("textarea");
+        helper.value = email;
+        helper.style.position = "fixed";
+        helper.style.opacity = "0";
+        document.body.appendChild(helper);
+        helper.select();
+        try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+        document.body.removeChild(helper);
+      }
+
+      button.textContent = ok ? "已复制" : "复制失败";
+      button.classList.toggle("copied", ok);
+      button.classList.toggle("copy-failed", !ok);
+      setTimeout(() => {
+        button.textContent = "复制";
+        button.classList.remove("copied");
+        button.classList.remove("copy-failed");
+      }, 1200);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttribute(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;");
+    }
+
+    parseButton.addEventListener("click", () => {
+      const parsed = parseAccounts(accountInput.value);
+      if (parsed.errors.length > 0) {
+        alert(parsed.errors.join("\n"));
+        return;
+      }
+
+      accounts = parsed.accounts;
+      selectedAccountIndex = accounts.length ? 0 : -1;
+      currentMessages = selectedAccountIndex >= 0 ? accounts[selectedAccountIndex].messages : [];
+      selectedMessageIndex = -1;
+      rawVisible = false;
+      setStatus(accounts.length ? "账号已载入，选择账号后可刷新邮件。" : "没有可用账号", accounts.length ? "ok" : "error");
+      renderAccounts();
+      renderMessages();
+      renderDetail();
+    });
+
+    refreshButton.addEventListener("click", async () => {
+      if (selectedAccountIndex < 0) return;
+      refreshButton.disabled = true;
+      setStatus("正在拉取当前账号邮件...");
+      try {
+        await loadMessagesForAccount(selectedAccountIndex);
+        setStatus("当前账号邮件已更新。", "ok");
+      } catch (error) {
+        accounts[selectedAccountIndex].status = "失败";
+        accounts[selectedAccountIndex].error = error.message;
+        setStatus(error.message, "error");
+        renderAccounts();
+      } finally {
+        refreshButton.disabled = false;
+      }
+    });
+
+    loadAllButton.addEventListener("click", async () => {
+      if (accounts.length === 0) return;
+
+      loadAllButton.disabled = true;
+      refreshButton.disabled = true;
+      setStatus("正在逐个拉取全部账号邮件...");
+
+      for (let index = 0; index < accounts.length; index += 1) {
+        try {
+          await loadMessagesForAccount(index);
+        } catch (error) {
+          accounts[index].status = "失败";
+          accounts[index].error = error.message;
+          renderAccounts();
+        }
+      }
+
+      loadAllButton.disabled = false;
+      refreshButton.disabled = selectedAccountIndex < 0;
+      const success = accounts.filter(account => account.status === "已拉取").length;
+      setStatus(`全部完成：${success}/${accounts.length} 个账号拉取成功。`, success === accounts.length ? "ok" : "error");
+    });
+
+    accountList.addEventListener("click", event => {
+      const item = event.target.closest(".account-item");
+      if (!item) return;
+
+      const index = Number(item.dataset.index);
+      const isCopy = !!event.target.closest(".copy-email");
+
+      // 不论点的是行内容还是“复制”，都切换到该账号，让右侧内容跟随变化。
+      selectedAccountIndex = index;
+      selectedMessageIndex = accounts[index].messages.length ? 0 : -1;
+      currentMessages = accounts[index].messages;
+      rawVisible = false;
+      renderAccounts();
+      renderMessages();
+      renderDetail();
+
+      if (isCopy) {
+        // 列表已重新渲染，重新定位该行的复制按钮再执行复制与反馈。
+        const button = accountList.querySelector(`.account-item[data-index="${index}"] .copy-email`);
+        if (button) copyEmail(button);
+      }
+    });
+
+    messageList.addEventListener("click", event => {
+      const item = event.target.closest(".message-item");
+      if (!item) return;
+
+      selectedMessageIndex = Number(item.dataset.index);
+      rawVisible = false;
+      renderMessages();
+      renderDetail();
+    });
+
+    rawButton.addEventListener("click", () => {
+      rawVisible = !rawVisible;
+      rawButton.textContent = rawVisible ? "隐藏 JSON" : "原始 JSON";
+      renderDetail();
+    });
+
+    parseButton.click();
+
+    if (loadedFromSync) {
+      setStatus(`已同步 ${accounts.length} 个改密成功的账号，点"拉取全部"即可拉邮件。`, "ok");
+    }
+  </script>
+</body>
+</html>

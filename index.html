@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FirstMail 批量修改密码</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #d9e0ea;
+      --accent: #246bfe;
+      --accent-strong: #174bc1;
+      --danger: #c13434;
+      --ok: #168a53;
+      --warn: #a36200;
+      --shadow: 0 14px 40px rgba(23, 32, 51, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+    }
+
+    .shell {
+      width: min(1480px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+
+    .nav-link {
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .nav-link:hover {
+      text-decoration: underline;
+    }
+
+    .status-pill {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    textarea,
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea:focus,
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(36, 107, 254, 0.14);
+    }
+
+    textarea {
+      min-height: 330px;
+      resize: vertical;
+      padding: 13px 14px;
+      line-height: 1.55;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 14px;
+    }
+
+    input {
+      height: 42px;
+      padding: 0 12px;
+    }
+
+    .password-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 76px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .password-wrap input {
+      min-width: 0;
+    }
+
+    .toggle-password {
+      height: 42px;
+      min-height: 42px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+      white-space: nowrap;
+    }
+
+    .toggle-password:hover:not(:disabled) {
+      border-color: #9aa8bc;
+    }
+
+    .hint {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      min-height: 42px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+      transform: none;
+    }
+
+    .primary {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .primary:hover:not(:disabled) {
+      background: var(--accent-strong);
+    }
+
+    .sync {
+      width: 100%;
+      background: var(--ok);
+      color: #fff;
+    }
+
+    .sync:hover:not(:disabled) {
+      background: #11703f;
+    }
+
+    .secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .secondary:hover:not(:disabled) {
+      border-color: #9aa8bc;
+    }
+
+    .danger-text {
+      color: var(--danger);
+    }
+
+    .warning {
+      border-left: 4px solid var(--warn);
+      background: #fff8ed;
+      color: #4a3511;
+      padding: 12px 13px;
+      border-radius: 6px;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcff;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .progress {
+      height: 10px;
+      border-radius: 999px;
+      background: #e8edf5;
+      overflow: hidden;
+      margin: 0 0 16px;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.18s ease;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      border-top: 1px solid var(--line);
+      padding: 11px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      background: #fbfcff;
+    }
+
+    .results {
+      max-height: 360px;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+    }
+
+    .results table th,
+    .results table td {
+      border-top: 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .ok {
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .fail {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .pending {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .mono {
+      font-family: Consolas, "Courier New", monospace;
+      word-break: break-all;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(23, 32, 51, 0.45);
+    }
+
+    .modal-overlay[hidden] {
+      display: none;
+    }
+
+    .modal {
+      width: min(820px, 100%);
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .modal-head,
+    .modal-foot {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: #fbfcff;
+    }
+
+    .modal-head {
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-foot {
+      justify-content: flex-end;
+      border-top: 1px solid var(--line);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .modal-body {
+      padding: 14px 16px;
+      overflow: auto;
+    }
+
+    .modal-foot button,
+    .modal-head button {
+      width: auto;
+    }
+
+    #exportText {
+      width: 100%;
+      min-height: 52vh;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      resize: vertical;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .toast {
+      max-width: 80vw;
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: #172033;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.5;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.error {
+      background: var(--danger);
+    }
+
+    .toast.ok {
+      background: var(--ok);
+    }
+
+    @media (max-width: 880px) {
+      header {
+        display: block;
+      }
+
+      .status-pill {
+        display: inline-block;
+        margin-top: 14px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      .panel-body {
+        padding: 14px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>FirstMail 批量修改密码</h1>
+        <p class="subtitle">每行粘贴一条原始数据，格式为 <span class="mono">email:current_password</span>。新密码会统一提交到接口。</p>
+      </div>
+      <div class="header-right">
+        <a class="nav-link" href="/messages.html" title="前往邮件查看器">邮件查看器 →</a>
+        <div class="status-pill" id="runStatus">待开始</div>
+      </div>
+    </header>
+
+    <section class="layout">
+      <div class="panel">
+        <div class="panel-body">
+          <div class="field">
+            <label for="accountInput">账号原始数据</label>
+            <textarea id="accountInput" spellcheck="false" placeholder="example@example.com:password"></textarea>
+            <p class="hint">支持空行，会自动忽略；同一邮箱重复出现时，后面的记录会覆盖前面的记录。</p>
+          </div>
+
+          <div class="stats" aria-live="polite">
+            <div class="stat">
+              <strong id="totalCount">0</strong>
+              <span>总数</span>
+            </div>
+            <div class="stat">
+              <strong id="doneCount">0</strong>
+              <span>已处理</span>
+            </div>
+            <div class="stat">
+              <strong id="successCount">0</strong>
+              <span>成功</span>
+            </div>
+            <div class="stat">
+              <strong id="failCount">0</strong>
+              <span>失败</span>
+            </div>
+          </div>
+
+          <div class="progress" aria-label="批量处理进度">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+
+        <div class="results">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 34%;">邮箱</th>
+                <th style="width: 12%;">状态</th>
+                <th>返回信息</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody">
+              <tr>
+                <td colspan="3" class="pending">暂无结果</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <div class="panel-body controls">
+          <div class="field">
+            <label for="newPassword">新密码</label>
+            <div class="password-wrap">
+              <input id="newPassword" type="password" autocomplete="new-password" placeholder="输入要修改成的新密码">
+              <button class="toggle-password" id="togglePassword" type="button" aria-label="显示新密码">显示</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="concurrency">并发数量</label>
+            <input id="concurrency" type="number" min="1" max="10" value="3">
+            <p class="hint">建议 1-5。接口有限流时，把并发调小一些。</p>
+          </div>
+
+          <button class="primary" id="startButton" type="button">开始修改</button>
+
+          <div class="button-row">
+            <button class="secondary" id="stopButton" type="button" disabled>停止</button>
+            <button class="secondary" id="clearButton" type="button">清空结果</button>
+          </div>
+
+          <button class="secondary" id="exportDataButton" type="button">导出当前数据</button>
+          <button class="secondary" id="exportEmailsButton" type="button">导出当前邮箱</button>
+          <button class="primary sync" id="syncButton" type="button" disabled>同步成功账号到邮件查看器 →</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="modal-overlay" id="exportModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="exportModalTitle">导出当前数据</div>
+        <button class="secondary" id="exportModalClose" type="button">关闭</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">下面内容可直接编辑（例如补填「现密码」「openrouter密钥」），确认后下载为 txt。账号块之间用空行分隔。</p>
+        <textarea id="exportText" spellcheck="false"></textarea>
+      </div>
+      <div class="modal-foot">
+        <button class="secondary" id="exportRegenerate" type="button">重新生成</button>
+        <button class="secondary" id="exportCopy" type="button">复制全部</button>
+        <button class="primary" id="exportDownload" type="button">下载 TXT</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "/api/change-password";
+
+    const accountInput = document.getElementById("accountInput");
+    const newPasswordInput = document.getElementById("newPassword");
+    const togglePasswordButton = document.getElementById("togglePassword");
+    const concurrencyInput = document.getElementById("concurrency");
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+    const clearButton = document.getElementById("clearButton");
+    const syncButton = document.getElementById("syncButton");
+    const exportDataButton = document.getElementById("exportDataButton");
+    const exportEmailsButton = document.getElementById("exportEmailsButton");
+    const exportModal = document.getElementById("exportModal");
+    const exportModalTitle = document.getElementById("exportModalTitle");
+    const exportText = document.getElementById("exportText");
+    const exportModalClose = document.getElementById("exportModalClose");
+    const exportRegenerate = document.getElementById("exportRegenerate");
+    const exportCopy = document.getElementById("exportCopy");
+    const exportDownload = document.getElementById("exportDownload");
+    const VIEWER_STORAGE_KEY = "firstmail_viewer_accounts";
+    const resultBody = document.getElementById("resultBody");
+    const runStatus = document.getElementById("runStatus");
+    const totalCount = document.getElementById("totalCount");
+    const doneCount = document.getElementById("doneCount");
+    const successCount = document.getElementById("successCount");
+    const failCount = document.getElementById("failCount");
+    const progressBar = document.getElementById("progressBar");
+
+    let results = [];
+    let stopped = false;
+    let activeController = null;
+
+    function showToast(message, type = "") {
+      let wrap = document.getElementById("toastWrap");
+      if (!wrap) {
+        wrap = document.createElement("div");
+        wrap.id = "toastWrap";
+        wrap.className = "toast-wrap";
+        document.body.appendChild(wrap);
+      }
+
+      const toast = document.createElement("div");
+      toast.className = `toast ${type}`.trim();
+      toast.textContent = message;
+      wrap.appendChild(toast);
+
+      requestAnimationFrame(() => toast.classList.add("show"));
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 220);
+      }, 2600);
+    }
+
+    function parseAccounts(rawText) {
+      const byEmail = new Map();
+      const errors = [];
+
+      rawText.split(/\r?\n/).forEach((line, index) => {
+        const value = line.trim();
+        if (!value) return;
+
+        const separator = value.indexOf(":");
+        if (separator <= 0 || separator === value.length - 1) {
+          errors.push(`第 ${index + 1} 行格式错误`);
+          return;
+        }
+
+        const email = value.slice(0, separator).trim();
+        const currentPassword = value.slice(separator + 1);
+
+        if (!email.includes("@")) {
+          errors.push(`第 ${index + 1} 行邮箱格式可能不正确`);
+          return;
+        }
+
+        byEmail.set(email, { email, currentPassword });
+      });
+
+      return { accounts: Array.from(byEmail.values()), errors };
+    }
+
+    function setRunning(isRunning) {
+      startButton.disabled = isRunning;
+      stopButton.disabled = !isRunning;
+      accountInput.disabled = isRunning;
+      newPasswordInput.disabled = isRunning;
+      togglePasswordButton.disabled = isRunning;
+      concurrencyInput.disabled = isRunning;
+    }
+
+    function resetStats() {
+      totalCount.textContent = "0";
+      doneCount.textContent = "0";
+      successCount.textContent = "0";
+      failCount.textContent = "0";
+      progressBar.style.width = "0%";
+    }
+
+    function updateStats() {
+      const total = results.length;
+      const done = results.filter(item => item.status !== "pending").length;
+      const success = results.filter(item => item.status === "success").length;
+      const fail = results.filter(item => item.status === "fail").length;
+
+      totalCount.textContent = String(total);
+      doneCount.textContent = String(done);
+      successCount.textContent = String(success);
+      failCount.textContent = String(fail);
+      progressBar.style.width = total ? `${Math.round((done / total) * 100)}%` : "0%";
+      syncButton.disabled = success === 0;
+    }
+
+    function renderResults() {
+      if (results.length === 0) {
+        resultBody.innerHTML = '<tr><td colspan="3" class="pending">暂无结果</td></tr>';
+        updateStats();
+        return;
+      }
+
+      resultBody.innerHTML = results.map(item => {
+        const statusClass = item.status === "success" ? "ok" : item.status === "fail" ? "fail" : "pending";
+        const statusText = item.status === "success" ? "成功" : item.status === "fail" ? "失败" : "等待";
+        return `
+          <tr>
+            <td class="mono">${escapeHtml(item.email)}</td>
+            <td class="${statusClass}">${statusText}</td>
+            <td>${escapeHtml(item.message || "")}</td>
+          </tr>
+        `;
+      }).join("");
+
+      updateStats();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function changePassword(account, newPassword, signal) {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: account.email,
+          current_password: account.currentPassword,
+          new_password: newPassword
+        }),
+        signal
+      });
+
+      let body = null;
+      let text = "";
+
+      try {
+        text = await response.text();
+        body = text ? JSON.parse(text) : null;
+      } catch (error) {
+        body = null;
+      }
+
+      if (!response.ok) {
+        const message = getResponseMessage(body, text) || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return getResponseMessage(body, text) || "修改成功";
+    }
+
+    function getResponseMessage(body, fallbackText) {
+      if (!body) return fallbackText || "";
+      if (typeof body === "string") return body;
+      if (body.message) return body.message;
+      if (body.detail) return body.detail;
+      if (body.error) return body.error;
+      return JSON.stringify(body);
+    }
+
+    async function runPool(accounts, newPassword, concurrency) {
+      let cursor = 0;
+
+      async function worker() {
+        while (!stopped && cursor < accounts.length) {
+          const index = cursor++;
+          const account = accounts[index];
+
+          try {
+            const message = await changePassword(account, newPassword, activeController.signal);
+            // 记下新密码，供"同步到邮件查看器"使用（改密成功后要用新密码拉邮件）。
+            results[index] = { email: account.email, status: "success", message, password: newPassword };
+          } catch (error) {
+            const message = error.name === "AbortError" ? "已停止" : error.message;
+            results[index] = { email: account.email, status: "fail", message };
+          }
+
+          renderResults();
+        }
+      }
+
+      const workerCount = Math.min(concurrency, accounts.length);
+      await Promise.all(Array.from({ length: workerCount }, worker));
+    }
+
+    startButton.addEventListener("click", async () => {
+      const newPassword = newPasswordInput.value;
+      const concurrency = Math.max(1, Math.min(10, Number(concurrencyInput.value) || 3));
+      const { accounts, errors } = parseAccounts(accountInput.value);
+
+      if (errors.length > 0) {
+        showToast(errors.join("；"), "error");
+        return;
+      }
+
+      if (accounts.length === 0) {
+        showToast("请先粘贴账号数据", "error");
+        return;
+      }
+
+      if (!newPassword) {
+        showToast("请输入新密码", "error");
+        return;
+      }
+
+      stopped = false;
+      activeController = new AbortController();
+      results = accounts.map(account => ({
+        email: account.email,
+        status: "pending",
+        message: "等待提交"
+      }));
+
+      runStatus.textContent = "处理中";
+      setRunning(true);
+      renderResults();
+
+      try {
+        await runPool(accounts, newPassword, concurrency);
+        runStatus.textContent = stopped ? "已停止" : "处理完成";
+      } finally {
+        setRunning(false);
+        activeController = null;
+        renderResults();
+      }
+    });
+
+    togglePasswordButton.addEventListener("click", () => {
+      const shouldShow = newPasswordInput.type === "password";
+      newPasswordInput.type = shouldShow ? "text" : "password";
+      togglePasswordButton.textContent = shouldShow ? "隐藏" : "显示";
+      togglePasswordButton.setAttribute("aria-label", shouldShow ? "隐藏新密码" : "显示新密码");
+      newPasswordInput.focus();
+    });
+
+    stopButton.addEventListener("click", () => {
+      stopped = true;
+      if (activeController) activeController.abort();
+      runStatus.textContent = "正在停止";
+    });
+
+    clearButton.addEventListener("click", () => {
+      if (activeController) return;
+      results = [];
+      runStatus.textContent = "待开始";
+      resetStats();
+      renderResults();
+    });
+
+    syncButton.addEventListener("click", () => {
+      const synced = results.filter(item => item.status === "success" && item.password);
+      if (synced.length === 0) {
+        showToast("还没有改密码成功的账号可同步", "error");
+        return;
+      }
+
+      const payload = synced.map(item => `${item.email}:${item.password}`).join("\n");
+      localStorage.setItem(VIEWER_STORAGE_KEY, payload);
+      // 同一标签页跳转到邮件查看器，对面会自动读取并填好账号数据。
+      window.location.href = "/messages.html";
+    });
+
+    // 弹窗当前模式：记录用哪个函数生成内容、下载文件名前缀（“重新生成”和“下载”据此工作）。
+    let exportBuilder = buildExportText;
+    let exportFilePrefix = "firstmail-export";
+
+    function openExportModal(title, builder, filePrefix, validate) {
+      const { accounts, errors } = parseAccounts(accountInput.value);
+      if (errors.length > 0) {
+        showToast(errors.join("；"), "error");
+        return;
+      }
+      if (accounts.length === 0) {
+        showToast("请先粘贴账号数据", "error");
+        return;
+      }
+      // 各模式的额外校验（校验失败时自行弹提示并返回 false）。
+      if (validate && !validate(accounts)) {
+        return;
+      }
+
+      exportBuilder = builder;
+      exportFilePrefix = filePrefix;
+      exportModalTitle.textContent = title;
+      exportText.value = builder();
+      exportModal.hidden = false;
+    }
+
+    function buildEmailsText() {
+      const { accounts } = parseAccounts(accountInput.value);
+      // 仅邮箱地址，每行一个。
+      return accounts.map(account => account.email).join("\n");
+    }
+
+    function buildExportText() {
+      const { accounts } = parseAccounts(accountInput.value);
+      const fallbackNew = newPasswordInput.value || "";
+      // 已运行过的账号，用各自实际提交的新密码；否则统一用新密码输入框的值。
+      const newPwByEmail = new Map(
+        results.filter(item => item.password).map(item => [item.email, item.password])
+      );
+      const newPwOf = account => newPwByEmail.get(account.email) || fallbackNew;
+
+      // 顶部两个汇总块：原始数据、当前数据（每行 邮箱:密码）。
+      const originalBlock = ["原始数据："]
+        .concat(accounts.map(account => `${account.email}:${account.currentPassword}`))
+        .join("\n");
+      const currentBlock = ["当前数据："]
+        .concat(accounts.map(account => `${account.email}:${newPwOf(account)}`))
+        .join("\n");
+
+      // 下方逐个账号的详细编号块。
+      const detailBlocks = accounts.map((account, index) => {
+        const email = account.email;
+        const origPw = account.currentPassword;
+        const newPw = newPwOf(account);
+        return [
+          `====== ${index + 1} ======`,
+          `原始数据：${email}:${origPw}`,
+          `当前数据：${email}:${newPw}`,
+          `邮箱：${email}`,
+          `现密码：${newPw}`,
+          `原密码：${origPw}`,
+          "openrouter密钥："
+        ].join("\n");
+      }).join("\n\n");
+
+      return [originalBlock, currentBlock, detailBlocks].join("\n\n");
+    }
+
+    function downloadText(filename, text) {
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    exportDataButton.addEventListener("click", () => {
+      openExportModal("导出当前数据", buildExportText, "firstmail-export", () => {
+        // 必须先执行过批量修改密码、有修改记录才允许导出。
+        if (results.length === 0) {
+          showToast("请先执行批量修改密码，有修改记录后才能导出", "error");
+          return false;
+        }
+        return true;
+      });
+    });
+
+    exportEmailsButton.addEventListener("click", () => {
+      openExportModal("导出当前邮箱", buildEmailsText, "firstmail-emails");
+    });
+
+    exportRegenerate.addEventListener("click", () => {
+      exportText.value = exportBuilder();
+    });
+
+    exportCopy.addEventListener("click", async () => {
+      const original = exportCopy.textContent;
+      try {
+        await navigator.clipboard.writeText(exportText.value);
+      } catch (error) {
+        exportText.select();
+        try { document.execCommand("copy"); } catch (e) {}
+      }
+      exportCopy.textContent = "已复制";
+      setTimeout(() => { exportCopy.textContent = original; }, 1200);
+    });
+
+    exportDownload.addEventListener("click", () => {
+      downloadText(`${exportFilePrefix}-${Date.now()}.txt`, exportText.value);
+      // 下载后给出反馈并自动关闭弹窗。
+      exportDownload.textContent = "已下载 ✓";
+      showToast("已下载 TXT 文件", "ok");
+      setTimeout(() => {
+        exportDownload.textContent = "下载 TXT";
+        exportModal.hidden = true;
+      }, 800);
+    });
+
+    exportModalClose.addEventListener("click", () => {
+      exportModal.hidden = true;
+    });
+
+    exportModal.addEventListener("click", event => {
+      // 点击遮罩空白处关闭弹窗。
+      if (event.target === exportModal) exportModal.hidden = true;
+    });
+  </script>
+</body>
+</html>

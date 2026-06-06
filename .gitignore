@@ -1,0 +1,16 @@
+# 环境变量（含 API Key），绝不提交
+.env
+
+# 日志
+*.log
+server.out.log
+server.err.log
+
+# 依赖
+node_modules/
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
