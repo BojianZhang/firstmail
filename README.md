@@ -36,4 +36,5 @@ node server.js
 
 ## Ubuntu 服务器部署
 
-见 [DEPLOY.md](DEPLOY.md)（systemd 常驻 + Nginx 反代 + HTTPS + 访问保护）。
+- **守护进程部署（开机自启 / 崩溃重启）**：见 [DAEMON.md](DAEMON.md)（systemd 推荐，附 pm2 备选）。
+- **完整部署（Nginx 反代 + HTTPS + 访问保护）**：见 [DEPLOY.md](DEPLOY.md)。
