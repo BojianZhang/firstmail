@@ -146,6 +146,24 @@
       padding: 0 11px;
     }
 
+    .check-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 0;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      margin: 0;
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+
     button {
       min-height: 40px;
       border: 1px solid transparent;
@@ -514,6 +532,13 @@
               <p class="hint">格式为 <span class="email">email:password</span>，支持多行。</p>
             </div>
             <div class="field">
+              <label class="check-label" for="specifyCount">
+                <input type="checkbox" id="specifyCount">
+                拉取指定数量邮件
+              </label>
+              <p class="hint">不勾选时只拉取最新的 1 封邮件。</p>
+            </div>
+            <div class="field" id="limitField" hidden>
               <label for="limitInput">拉取邮件数量</label>
               <input id="limitInput" type="number" min="1" max="100" value="10">
               <p class="hint">每个账号最多拉取多少封邮件（1-100）。</p>
@@ -557,6 +582,8 @@
 example2@example.com:password2`;
 
     const accountInput = document.getElementById("accountInput");
+    const specifyCount = document.getElementById("specifyCount");
+    const limitField = document.getElementById("limitField");
     const limitInput = document.getElementById("limitInput");
     const parseButton = document.getElementById("parseButton");
     const loadAllButton = document.getElementById("loadAllButton");
@@ -707,18 +734,20 @@ example2@example.com:password2`;
       account.error = "";
       renderAccounts();
 
-      const response = await fetch("/api/messages", {
+      // 勾选“拉取指定数量”→ 按数量拉；否则只拉最新 1 封（走 latest 接口）。
+      const specify = specifyCount.checked;
+      const endpoint = specify ? "/api/messages" : "/api/messages/latest";
+      const body = specify
+        ? { email: account.email, password: account.password, limit: Number(limitInput.value) || 10, folder: "INBOX" }
+        : { email: account.email, password: account.password, folder: "INBOX" };
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "accept": "application/json",
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          email: account.email,
-          password: account.password,
-          limit: Number(limitInput.value) || 10,
-          folder: "INBOX"
-        })
+        body: JSON.stringify(body)
       });
 
       const text = await response.text();
@@ -733,7 +762,7 @@ example2@example.com:password2`;
         throw new Error(getResponseMessage(data, text) || `HTTP ${response.status}`);
       }
 
-      const messages = sortByDateDesc(normalizeMessages(data));
+      const messages = sortByDateDesc(specify ? normalizeMessages(data) : normalizeLatest(data));
       account.messages = messages;
       account.count = messages.length;
       account.status = "已拉取";
@@ -764,6 +793,25 @@ example2@example.com:password2`;
         }
       }
 
+      return [];
+    }
+
+    function normalizeLatest(data) {
+      // latest 接口通常返回单封邮件对象；先按常规数组/键解析。
+      const arr = normalizeMessages(data);
+      if (arr.length) return arr;
+
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        // 邮件可能被包在某个键里（单对象），尝试解包一层。
+        for (const key of ["message", "data", "email", "result", "mail", "latest"]) {
+          const inner = data[key];
+          if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+            return [inner];
+          }
+        }
+        // 没有可识别的包裹键，就把对象本身当成一封邮件。
+        return [data];
+      }
       return [];
     }
 
@@ -1020,6 +1068,11 @@ example2@example.com:password2`;
       rawVisible = !rawVisible;
       rawButton.textContent = rawVisible ? "隐藏 JSON" : "原始 JSON";
       renderDetail();
+    });
+
+    specifyCount.addEventListener("change", () => {
+      // 勾选时显示数量输入框，否则隐藏（只拉最新 1 封）。
+      limitField.hidden = !specifyCount.checked;
     });
 
     parseButton.click();

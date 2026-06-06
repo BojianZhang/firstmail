@@ -30,6 +30,7 @@ const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || "127.0.0.1";
 const CHANGE_PASSWORD_API_URL = "https://firstmail.ltd/api/v1/email/password/change/";
 const MESSAGES_API_URL = "https://firstmail.ltd/api/v1/email/messages";
+const LATEST_MESSAGE_API_URL = "https://firstmail.ltd/api/v1/email/messages/latest";
 // API Key 只从环境变量 / .env 读取，绝不写死在源码里（避免泄露到仓库）。
 const API_KEY = process.env.FIRSTMAIL_API_KEY || "";
 if (!API_KEY) {
@@ -182,6 +183,62 @@ async function proxyMessages(req, res) {
   }
 }
 
+async function proxyLatestMessage(req, res) {
+  let payload;
+
+  try {
+    payload = JSON.parse(await readBody(req));
+  } catch (error) {
+    sendJson(res, 400, { error: "Invalid JSON request body" });
+    return;
+  }
+
+  if (!payload.email || !payload.password) {
+    sendJson(res, 400, { error: "Missing email/password" });
+    return;
+  }
+
+  const folder = payload.folder || "INBOX";
+
+  try {
+    const upstream = await fetch(LATEST_MESSAGE_API_URL, {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "X-API-KEY": API_KEY,
+        "Content-Type": "application/json",
+        "User-Agent": "FirstMailLocalMessageTool/1.0"
+      },
+      body: JSON.stringify({
+        email: payload.email,
+        password: payload.password,
+        folder
+      })
+    });
+
+    const contentType = upstream.headers.get("content-type") || "";
+    const text = await upstream.text();
+
+    if (contentType.includes("text/html") || /<title>\s*Captcha\s*<\/title>/i.test(text)) {
+      sendJson(res, 403, {
+        error: "The upstream API returned a captcha/protection page instead of JSON"
+      });
+      return;
+    }
+
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (error) {
+      data = { message: text || `HTTP ${upstream.status}` };
+    }
+
+    sendJson(res, upstream.status, data || { message: upstream.ok ? "Latest message loaded" : `HTTP ${upstream.status}` });
+  } catch (error) {
+    sendJson(res, 502, { error: `Local proxy request failed: ${error.message}` });
+  }
+}
+
 function serveStatic(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const requestedPath = url.pathname === "/" ? "/index.html" : url.pathname;
@@ -211,6 +268,11 @@ function serveStatic(req, res) {
 const server = http.createServer((req, res) => {
   if (req.method === "POST" && req.url === "/api/change-password") {
     proxyChangePassword(req, res);
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/api/messages/latest") {
+    proxyLatestMessage(req, res);
     return;
   }
 
