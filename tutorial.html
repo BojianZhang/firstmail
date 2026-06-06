@@ -32,7 +32,7 @@
     }
 
     .shell {
-      width: min(920px, calc(100% - 32px));
+      width: min(1160px, calc(100% - 40px));
       margin: 0 auto;
       padding: 28px 0 56px;
     }
@@ -228,7 +228,51 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       box-shadow: var(--shadow);
+      cursor: zoom-in;
+      transition: box-shadow 0.15s ease;
     }
+
+    .step-shot:hover {
+      box-shadow: 0 8px 26px rgba(36, 107, 254, 0.22);
+    }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(8, 12, 22, 0.88);
+      cursor: zoom-out;
+    }
+
+    .lightbox.open { display: flex; }
+
+    .lightbox img {
+      max-width: 96vw;
+      max-height: 92vh;
+      border-radius: 6px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .lightbox-close {
+      position: fixed;
+      top: 14px;
+      right: 22px;
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .lightbox-close:hover { background: rgba(255, 255, 255, 0.28); }
 
     .step-shot.missing {
       display: flex;
@@ -332,12 +376,12 @@
 
     <section class="card" id="steps">
       <h2>★ 图文操作步骤</h2>
-      <p class="lead" style="margin-bottom:14px;">以「拉取邮件、获取各项目验证信息」为例，跟着下面 7 步走即可。</p>
+      <p class="lead" style="margin-bottom:14px;">以「拉取邮件、获取各项目验证信息」为例，跟着下面 7 步走即可。<b>点击任意截图可放大查看。</b></p>
 
       <div class="export-bar">
         <button class="btn" id="btnPpt" type="button">下载 PPT</button>
         <button class="btn ghost" id="btnPdf" type="button">下载 PDF</button>
-        <span class="export-hint" id="exportHint">PDF 会打开打印窗口，选「另存为 PDF」即可。</span>
+        <span class="export-hint" id="exportHint">点击按钮即可实时生成并下载。</span>
       </div>
 
       <div class="step-item">
@@ -504,8 +548,36 @@ openrouter密钥：</code></pre>
     <footer>FirstMail 工具 · 使用教程</footer>
   </main>
 
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose" type="button" aria-label="关闭">×</button>
+    <img id="lightboxImg" src="" alt="放大查看">
+  </div>
+
   <script>
+    // 图片灯箱：点击步骤截图全屏放大，再次点击 / Esc / 关闭按钮收起。
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightboxImg");
+
+    function closeLightbox() {
+      lightbox.classList.remove("open");
+      lightboxImg.src = "";
+    }
+
+    document.querySelectorAll(".step-shot").forEach(img => {
+      img.addEventListener("click", () => {
+        lightboxImg.src = img.currentSrc || img.src;
+        lightbox.classList.add("open");
+      });
+    });
+
+    lightbox.addEventListener("click", closeLightbox);
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeLightbox();
+    });
+
     const PPTX_CDN = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";
+    const HTML2CANVAS_CDN = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    const JSPDF_CDN = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
     const btnPpt = document.getElementById("btnPpt");
     const btnPdf = document.getElementById("btnPdf");
     const exportHint = document.getElementById("exportHint");
@@ -528,10 +600,47 @@ openrouter密钥：</code></pre>
       }));
     }
 
-    // PDF：用浏览器打印（中文渲染最佳），配合 @media print 只导出步骤。
-    btnPdf.addEventListener("click", () => {
-      exportHint.textContent = "在打印窗口里把目标选成「另存为 PDF」即可下载。";
-      window.print();
+    // PDF：用 html2canvas 把每个步骤截成图，jsPDF 每步一页拼成 PDF，直接下载（无打印窗口、无网址页脚）。
+    btnPdf.addEventListener("click", async () => {
+      btnPdf.disabled = true;
+      exportHint.textContent = "正在生成 PDF…";
+      try {
+        if (typeof html2canvas === "undefined") await loadScript(HTML2CANVAS_CDN);
+        if (!window.jspdf) await loadScript(JSPDF_CDN);
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: "pt", format: "a4" });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const margin = 28;
+        const gap = 18;
+        const maxW = pageW - margin * 2;
+        const usableH = pageH - margin * 2;
+        let y = margin;
+
+        const items = [...document.querySelectorAll("#steps .step-item")];
+        for (let i = 0; i < items.length; i++) {
+          const canvas = await html2canvas(items[i], { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+          let w = maxW;
+          let h = canvas.height * (w / canvas.width);
+          // 单步若超过整页高度，按页高等比缩放。
+          if (h > usableH) { h = usableH; w = canvas.width * (h / canvas.height); }
+          // 当前页放不下且已不在页首，则翻页。
+          if (y + h > pageH - margin && y > margin) {
+            pdf.addPage();
+            y = margin;
+          }
+          pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", margin, y, w, h);
+          y += h + gap;
+        }
+
+        pdf.save("FirstMail使用教程.pdf");
+        exportHint.textContent = "PDF 已下载 ✓";
+      } catch (err) {
+        exportHint.textContent = "生成失败：" + err.message;
+      } finally {
+        btnPdf.disabled = false;
+      }
     });
 
     // PPT：用 PptxGenJS 按需加载，每个步骤一张幻灯片。
