@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FirstMail 工具 · 使用教程</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6fa;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #d9e0ea;
+      --accent: #246bfe;
+      --accent-strong: #174bc1;
+      --danger: #c13434;
+      --ok: #168a53;
+      --warn: #a36200;
+      --shadow: 0 14px 40px rgba(23, 32, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      line-height: 1.7;
+    }
+
+    .shell {
+      width: min(920px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 34px);
+      line-height: 1.1;
+    }
+
+    .nav {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .nav a {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .nav a:hover { text-decoration: underline; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 22px 24px;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h3 {
+      margin: 20px 0 8px;
+      font-size: 16px;
+    }
+
+    h3:first-of-type { margin-top: 4px; }
+
+    p { margin: 8px 0; }
+
+    ul, ol { margin: 8px 0; padding-left: 22px; }
+    li { margin: 5px 0; }
+
+    .lead {
+      color: var(--muted);
+      margin: 0 0 20px;
+    }
+
+    code, .mono {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+      background: #eef1f7;
+      padding: 1px 6px;
+      border-radius: 5px;
+      word-break: break-all;
+    }
+
+    pre {
+      background: #0f1729;
+      color: #e6edf6;
+      border-radius: 8px;
+      padding: 14px 16px;
+      overflow: auto;
+      line-height: 1.55;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      font-size: 13px;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px 18px;
+    }
+
+    .toc a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .toc a:hover { text-decoration: underline; }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: #f1f6ff;
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
+
+    .warn {
+      border-left: 4px solid var(--warn);
+      background: #fff8ed;
+      color: #4a3511;
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
+
+    .danger {
+      border-left: 4px solid var(--danger);
+      background: #fdf1f1;
+      color: #5a1f1f;
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 11px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #fbfcff; font-weight: 700; }
+
+    .step {
+      counter-reset: none;
+      padding-left: 0;
+    }
+
+    .pill {
+      display: inline-block;
+      background: #eef1f7;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 7px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .step-item:first-of-type { border-top: 0; }
+
+    .step-num {
+      flex: 0 0 auto;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-body { flex: 1 1 auto; min-width: 0; }
+
+    .step-body p { margin: 0 0 10px; }
+
+    .step-shot {
+      display: block;
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .step-shot.missing {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      color: var(--muted);
+      font-size: 13px;
+      background: #fbfcff;
+      border-style: dashed;
+    }
+
+    .export-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 9px 16px;
+      cursor: pointer;
+    }
+
+    .btn:hover:not(:disabled) { background: var(--accent-strong); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn.ghost {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .btn.ghost:hover:not(:disabled) { background: #f3f6fc; border-color: #9aa8bc; }
+
+    .export-hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media print {
+      @page { margin: 14mm; }
+      body { background: #fff; }
+      .shell { width: 100%; padding: 0; }
+      .nav, .lead, .export-bar, #toc-card, #overview, #change, #viewer, #workflow, #faq, footer {
+        display: none !important;
+      }
+      header { margin-bottom: 10px; }
+      .card {
+        box-shadow: none;
+        border: 0;
+        padding: 0;
+        margin: 0;
+      }
+      #steps h2 { border-bottom: 1px solid var(--line); }
+      .step-item {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>FirstMail 工具 · 使用教程</h1>
+      <nav class="nav">
+        <a href="/">批量修改密码</a>
+        <a href="/messages.html">邮件查看器</a>
+        <a href="https://firstmail.ltd/webmail" target="_blank" rel="noopener">网页邮箱 ↗</a>
+      </nav>
+    </header>
+
+    <p class="lead">本工具包含两个页面：<b>批量修改密码</b>和<b>邮件查看器</b>。下面按页面分别讲解，并给出典型工作流和常见问题。</p>
+
+    <section class="card" id="toc-card">
+      <h2>目录</h2>
+      <div class="toc">
+        <a href="#steps">★ 图文操作步骤</a>
+        <a href="#overview">① 总览与访问</a>
+        <a href="#change">② 批量修改密码</a>
+        <a href="#viewer">③ 邮件查看器</a>
+        <a href="#workflow">④ 典型工作流</a>
+        <a href="#faq">⑤ 常见问题</a>
+      </div>
+    </section>
+
+    <section class="card" id="steps">
+      <h2>★ 图文操作步骤</h2>
+      <p class="lead" style="margin-bottom:14px;">以「拉取邮件、获取各项目验证信息」为例，跟着下面 7 步走即可。</p>
+
+      <div class="export-bar">
+        <button class="btn" id="btnPpt" type="button">下载 PPT</button>
+        <button class="btn ghost" id="btnPdf" type="button">下载 PDF</button>
+        <span class="export-hint" id="exportHint">PDF 会打开打印窗口，选「另存为 PDF」即可。</span>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <p><b>输入访问网址</b>：在浏览器打开 <code>https://firstmail.nexoraivision.com</code>，进入「批量修改密码」首页。</p>
+          <img class="step-shot" src="images/step1.png" alt="第一步：访问首页" loading="lazy">
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <p><b>进入邮件查看器</b>：点右上角 <b>邮件查看器 →</b>，跳转到 <code>https://firstmail.nexoraivision.com/messages.html</code>。</p>
+          <img class="step-shot" src="images/step2.png" alt="第二步：进入邮件查看器" loading="lazy">
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <p><b>粘贴账号数据</b>：在左侧「原始数据」每行粘贴 <code>邮箱:密码</code>；也可以从「批量修改密码」页点「同步成功账号到邮件查看器」自动带过来。</p>
+          <img class="step-shot" src="images/step3.png" alt="第三步：粘贴或同步原始数据" loading="lazy">
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <p><b>载入账号</b>：点 <b>载入账号</b>，左下方出现账号列表。</p>
+          <img class="step-shot" src="images/step4.png" alt="第四步：载入账号" loading="lazy">
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <p><b>拉取邮件</b>：左侧选中一个账号 → 点中间蓝色 <b>拉取邮件</b>（只拉当前账号）；或点 <b>拉取全部</b> 逐个拉所有账号。</p>
+          <img class="step-shot" src="images/step5.png" alt="第五步：拉取邮件 / 拉取全部" loading="lazy">
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <p><b>查看邮件正文</b>：中间「邮件列表」按时间从近到远排列，点一封 → 右侧显示发件人 / 收件人 / 时间 / 正文。</p>
+          <img class="step-shot" src="images/step6.png" alt="第六步：查看邮件正文" loading="lazy">
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <p><b>登录各项目获取信息</b>：在各类项目（如 OpenRouter）注册/登录时填入这些邮箱，再回到邮件查看器拉取，即可拿到验证链接、验证码等信息完成验证。</p>
+          <img class="step-shot" src="images/step7.png" alt="第七步：登录各项目获取邮件信息" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="overview">
+      <h2>① 总览与访问</h2>
+      <p>启动服务后，在浏览器打开：</p>
+      <ul>
+        <li><b>批量修改密码</b>：<code>https://firstmail.nexoraivision.com</code></li>
+        <li><b>邮件查看器</b>：<code>https://firstmail.nexoraivision.com/messages.html</code></li>
+      </ul>
+      <p>两个页面顶部可互相跳转，本教程页也能从顶部导航返回任一页面。</p>
+      <div class="note">账号数据格式统一为 <code>邮箱:密码</code>，每行一条；空行会自动忽略；同一邮箱重复出现时，<b>后面的会覆盖前面的</b>。</div>
+    </section>
+
+    <section class="card" id="change">
+      <h2>② 批量修改密码</h2>
+      <p>把一批邮箱的密码统一改成同一个新密码。</p>
+
+      <h3>基本步骤</h3>
+      <ol>
+        <li>在「账号原始数据」里每行粘贴 <code>邮箱:当前密码</code>。</li>
+        <li>右侧「新密码」填要改成的新密码（点「显示/隐藏」可切换明文）。</li>
+        <li>「并发数量」建议 <span class="pill">1-5</span>，接口限流时调小。</li>
+        <li>点 <b>开始修改</b>。上方四个数字实时显示<b>总数 / 已处理 / 成功 / 失败</b>，下方进度条和结果表逐条更新。</li>
+        <li>需要中途停止点 <b>停止</b>；清空结果表点 <b>清空结果</b>。</li>
+      </ol>
+
+      <h3>导出当前数据</h3>
+      <p>点 <b>导出当前数据</b> 弹出一个<b>可编辑窗口</b>，已按固定格式预填好内容，可直接编辑后下载为 txt。</p>
+      <div class="warn">需要<b>先执行过批量修改密码（有修改记录）</b>才能导出，否则会提示拦截。</div>
+      <p>导出内容结构：顶部是两个汇总块，下面是每个账号的编号详情块。</p>
+      <pre><code>原始数据：
+邮箱A:原密码
+邮箱B:原密码
+...
+
+当前数据：
+邮箱A:新密码
+邮箱B:新密码
+...
+
+====== 1 ======
+原始数据：邮箱A:原密码
+当前数据：邮箱A:新密码
+邮箱：邮箱A
+现密码：新密码
+原密码：原密码
+openrouter密钥：</code></pre>
+      <p><code>现密码</code>=新密码、<code>原密码</code>=旧密码；<code>openrouter密钥</code>留空，可在弹窗里手动补填。点 <b>下载 TXT</b> 保存，或 <b>复制全部</b>，或 <b>重新生成</b> 恢复成最新数据。</p>
+
+      <h3>导出当前邮箱</h3>
+      <p>点 <b>导出当前邮箱</b>，弹窗里是<b>仅邮箱地址（每行一个）</b>的列表，可编辑后下载 txt。</p>
+
+      <h3>同步成功账号到邮件查看器</h3>
+      <p>批量改密码跑完后，点绿色的 <b>同步成功账号到邮件查看器 →</b>：会把<b>改密成功的</b> <code>邮箱:新密码</code> 传给邮件查看器并自动跳转，在那边点「拉取全部」即可直接拉邮件，不用重新粘贴。</p>
+    </section>
+
+    <section class="card" id="viewer">
+      <h2>③ 邮件查看器</h2>
+      <p>按账号拉取邮件、查看正文。</p>
+
+      <h3>基本步骤</h3>
+      <ol>
+        <li>左侧「原始数据」每行粘贴 <code>邮箱:密码</code>（或从改密码页同步过来）。</li>
+        <li>点 <b>载入账号</b>，左下方出现账号列表。</li>
+        <li>左侧选中一个账号 → 点中间的蓝色 <b>拉取邮件</b>，只拉当前账号；或点 <b>拉取全部</b> 逐个拉所有账号。</li>
+        <li>中间「邮件列表」按<b>时间从近到远</b>排列，点一封 → 右侧显示发件人 / 收件人 / 时间 / 正文。</li>
+      </ol>
+
+      <h3>拉取数量开关</h3>
+      <p>账号区有个 <b>拉取指定数量邮件</b> 复选框：</p>
+      <table>
+        <tr><th>状态</th><th>行为</th></tr>
+        <tr><td><b>不勾选</b>（默认）</td><td>只拉取<b>最新的 1 封</b>邮件，速度快，还能绕过靠后那封可能导致解析报错的邮件。</td></tr>
+        <tr><td><b>勾选</b></td><td>下方出现「拉取邮件数量」输入框，按填写的条数拉取（1-100）。</td></tr>
+      </table>
+
+      <h3>其它操作</h3>
+      <ul>
+        <li>账号列表每行右侧的 <b>复制</b> 按钮：一键复制该邮箱地址，并同时切换到该账号。</li>
+        <li>账号状态会实时显示：<span class="pill">待拉取</span> → <span class="pill">拉取中</span> → <span class="pill">已拉取 · N 封</span>，失败则显示错误。</li>
+        <li>右上角 <b>原始 JSON</b>：查看当前邮件的原始接口返回，排查问题时很有用。</li>
+      </ul>
+    </section>
+
+    <section class="card" id="workflow">
+      <h2>④ 典型工作流</h2>
+      <ol>
+        <li>在「批量修改密码」粘贴 <code>邮箱:当前密码</code>，填新密码，点 <b>开始修改</b>。</li>
+        <li>跑完后点 <b>同步成功账号到邮件查看器 →</b>，自动跳转过去且账号已填好。</li>
+        <li>在「邮件查看器」点 <b>拉取全部</b>（默认每个账号拉最新 1 封），查看各账号收到的验证邮件等。</li>
+        <li>需要留档时，回到改密码页点 <b>导出当前数据</b> 或 <b>导出当前邮箱</b>，编辑后下载 txt。</li>
+      </ol>
+    </section>
+
+    <section class="card" id="faq">
+      <h2>⑤ 常见问题</h2>
+
+      <h3>拉取邮件时报 <code>IMAP error: 'utf-8' codec can't decode ...</code></h3>
+      <p>这是<b>上游 FirstMail 接口</b>的错误：某封邮件用了非 UTF-8 编码（常见于中文老编码或附件二进制），接口解析时崩了，<b>不是你的账号或密码问题</b>。处理办法：</p>
+      <ul>
+        <li><b>不勾选</b>「拉取指定数量邮件」，只拉最新 1 封——若问题邮件是旧邮件就绕过去了。</li>
+        <li>或勾选后把数量调小（如 3）重试。</li>
+        <li>仍不行就这个账号暂时去 FirstMail 网页版看；其它账号不受影响。</li>
+      </ul>
+    </section>
+
+    <footer>FirstMail 工具 · 使用教程</footer>
+  </main>
+
+  <script>
+    const PPTX_CDN = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";
+    const btnPpt = document.getElementById("btnPpt");
+    const btnPdf = document.getElementById("btnPdf");
+    const exportHint = document.getElementById("exportHint");
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const tag = document.createElement("script");
+        tag.src = src;
+        tag.onload = () => resolve();
+        tag.onerror = () => reject(new Error("脚本加载失败：" + src));
+        document.head.appendChild(tag);
+      });
+    }
+
+    function getSteps() {
+      return [...document.querySelectorAll("#steps .step-item")].map(item => ({
+        num: item.querySelector(".step-num").textContent.trim(),
+        text: item.querySelector(".step-body p").textContent.trim(),
+        img: item.querySelector("img") ? item.querySelector("img").getAttribute("src") : ""
+      }));
+    }
+
+    // PDF：用浏览器打印（中文渲染最佳），配合 @media print 只导出步骤。
+    btnPdf.addEventListener("click", () => {
+      exportHint.textContent = "在打印窗口里把目标选成「另存为 PDF」即可下载。";
+      window.print();
+    });
+
+    // PPT：用 PptxGenJS 按需加载，每个步骤一张幻灯片。
+    btnPpt.addEventListener("click", async () => {
+      btnPpt.disabled = true;
+      exportHint.textContent = "正在生成 PPT…";
+      try {
+        if (typeof PptxGenJS === "undefined") {
+          await loadScript(PPTX_CDN);
+        }
+
+        const pptx = new PptxGenJS();
+        const steps = getSteps();
+
+        const cover = pptx.addSlide();
+        cover.background = { color: "F4F6FA" };
+        cover.addText("FirstMail 工具 · 使用教程", {
+          x: 0.5, y: 2.0, w: 9, h: 1, fontSize: 32, bold: true, align: "center", color: "172033"
+        });
+        cover.addText("图文操作步骤", {
+          x: 0.5, y: 3.0, w: 9, h: 0.6, fontSize: 18, align: "center", color: "667085"
+        });
+
+        for (const s of steps) {
+          const slide = pptx.addSlide();
+          slide.background = { color: "FFFFFF" };
+          slide.addText(`步骤 ${s.num}`, {
+            x: 0.4, y: 0.25, w: 9.2, h: 0.5, fontSize: 24, bold: true, color: "246BFE"
+          });
+          slide.addText(s.text, {
+            x: 0.4, y: 0.85, w: 9.2, h: 0.85, fontSize: 13, color: "172033", valign: "top"
+          });
+          if (s.img) {
+            slide.addImage({
+              path: s.img,
+              x: 0.4, y: 1.75, w: 9.2, h: 3.5,
+              sizing: { type: "contain", w: 9.2, h: 3.5 }
+            });
+          }
+        }
+
+        await pptx.writeFile({ fileName: "FirstMail使用教程.pptx" });
+        exportHint.textContent = "PPT 已下载 ✓";
+      } catch (err) {
+        exportHint.textContent = "生成失败：" + err.message;
+      } finally {
+        btnPpt.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
